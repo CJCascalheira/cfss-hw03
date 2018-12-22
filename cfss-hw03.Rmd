@@ -18,6 +18,12 @@ library(tidyverse)
 library(readxl)
 ```
 
+Set the default theme for `ggplot2`.
+
+```{r}
+theme_set(theme_minimal())
+```
+
 Load the data.
 
 ```{r}
@@ -89,10 +95,11 @@ Tidy the HIV data frame.
 )
 ```
 
-Transform year variable into an integer.
+Transform year variable into an integer and HIV prevalence into a numeric.
 
 ```{r}
 hiv3$year <- as.integer(hiv3$year)
+hiv3$hiv_prevalence <- as.numeric(hiv3$hiv_prevalence)
 
 # Verify change
 head(hiv3)
@@ -100,10 +107,45 @@ head(hiv3)
 
 ## HIV Prevalence & Life Expectancy
 
-```{r}
+I will use a `left_join()` to keep all original columns and observations from `gapminder`, effectively appending the HIV prevalence variable to the dataset.
 
+```{r}
+(gap_hiv <- left_join(gapminder, hiv3, by = c("country", "year")))
 ```
 
+What is the relationship between HIV prevalence and life expectancy?
+
+```{r}
+# Filter out missing values
+gap_hiv_complete <- gap_hiv %>%
+  filter(!is.na(hiv_prevalence))
+
+# Simple linear model
+lm(lifeExp ~ hiv_prevalence, data = gap_hiv_complete)
+```
+
+There is a negative relationship between life expectancy and HIV prevalence. For each 1% increase of infection in the adult population, the life expectancy decreases by an average of 1.42 years.
+
+```{r fig.height=7, fig.width=7, message=FALSE}
+gap_hiv_complete %>%
+  # Add continent for more detail
+  ggplot(aes(x = hiv_prevalence, y = lifeExp, color = continent)) +
+  geom_point(size = 2, alpha = 0.5) +
+  # Prevent color aesthetic from inheriting
+  geom_smooth(aes(color = NULL), se = FALSE, color = "cadetblue", size = 2) +
+  # Provide nice labels
+  labs(title = "Life Expectancy Predicted by HIV Infection Rate Among Adults",
+       caption = "Source: Gapminder",
+       x = "HIV Prevalence",
+       y = "Life Expectancy",
+       color = "Continent") +
+  # Add custom colors
+  scale_color_brewer(type = "qual", palette = "Paired") +
+  # Move legend
+  theme(legend.position = "top")
+```
+
+The trend is negative and drops sharply. 
 
 # Part 3
 ___
