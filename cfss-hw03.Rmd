@@ -159,10 +159,137 @@ gap_hiv %>%
   # Filter out non-missing values
   filter(missing == TRUE) %>%
   # Bar chart of results
-  
+  ggplot(aes(x = fct_rev(fct_reorder(continent, n)), y = n)) +
+    # Use columns instead of bars to plot precise number
+    geom_col() +
+    # Add labels
+    labs(title = "Missing Data on HIV Prevalence by Continent",
+         caption = "Source: Gapminder",
+         x = NULL,
+         y = "Number of Missing Cases")
 ```
 
 Alarmingly, even though African countries have the most cases of HIV, the dataset is least complete on the African continent. The HIV epidemic is likely more widespread than the data suggest.
 
 # Part 3
 ___
+Load the two datasets.
+
+```{r message=FALSE, warning=FALSE}
+modern <- read_csv("J:/sample_data/SCDB_2017_01_justiceCentered_Citation.csv")
+legacy <- read_csv("J:/sample_data/SCDB_Legacy_03_justiceCentered_Citation.csv")
+```
+
+What do the variables of interest mean?
+
+* `caseIssuesID`: unique key identifier
+* `term`: term when decision handed down; has changed over the years
+* `justice`: identification number of justices
+* `justiceName`: name of justice
+* `decisionDirection`: numeric variable; 1 = conservative, 2 = liberal, 3 = unspecified
+* `majVotes`: number of justices voting in the majority
+* `minVotes`: number fo justices voting in the dissent
+* `majority`: whether justice voted with 1 = dissent or 2 = majority 
+* `chief`: chief justice of the court
+* `dateDecision`: date that decision was delivered
+* `decisionType`: type of court decision, with values of:
+    1.	opinion of the court (orally argued)
+    2.	per curiam (no oral argument)
+    4.	decrees
+    5.	equally divided vote
+    6.	per curiam (orally argued)
+    7.	judgment of the Court (orally argued)
+    8.	seriatim
+
+Select only these variables from both datasets.
+
+```{r}
+modern_sm <- modern %>%
+  select(caseIssuesId, term, justice, justiceName, decisionDirection,
+         majVotes, minVotes, majority, chief, dateDecision, decisionType)
+
+legacy_sm <- legacy %>%
+  select(caseIssuesId, term, justice, justiceName, decisionDirection,
+         majVotes, minVotes, majority, chief, dateDecision, decisionType)
+```
+
+Bind the rows to create a combined data frame.
+
+```{r}
+(supreme <- bind_rows(modern_sm, legacy_sm))
+```
+
+## Percentage of Cases Decided by One-vote Margin
+
+The observational unit is at the individual justice level per case. First, we need to count the number of cases per term. 
+
+```{r}
+(cases_per_term <- supreme %>%
+  # n represents the number of justices
+  count(term, caseIssuesId) %>%
+  group_by(term) %>%
+  summarize(
+    num_cases = n()
+  ))
+```
+
+Count the number of decisions with a one-vote margin per term.
+
+```{r}
+(num_marginal_votes <- supreme %>%
+  # Create new margin variable
+  mutate(margin = majVotes - minVotes) %>%
+  # n represents the number of justices
+  count(term, caseIssuesId, margin) %>%
+  # Only cases with a one-vote margin
+  filter(margin == 1) %>%
+  # Group cases by term
+  group_by(term) %>%
+  summarize(
+    num_marginal_votes = n()
+  ))
+```
+
+Now, we can `left_join` the two data frames. Missing values for the variable `marginal_votes` indicates that the term had no one-vote margins.
+
+```{r}
+(one_vote_terms <- left_join(cases_per_term, num_marginal_votes, by = "term"))
+```
+
+Replace the missing values with the number zero. This zero represents an absence of marginal votes, not a margin of zero (which would represent a split vote).
+
+```{r}
+# Which rows are missing values?
+(no_margin <- which(is.na(one_vote_terms$num_marginal_votes)))
+
+# Subset data frame to replace missing values with 0
+one_vote_terms$num_marginal_votes[no_margin] <- 0
+
+# Verify that the process worked
+head(one_vote_terms)
+```
+
+Percentage of cases decided by a one-vote margin.
+
+```{r}
+one_vote_terms %>%
+  mutate(percent_marginal = num_marginal_votes / num_cases)
+```
+
+A graphical representation of the percentage of decisions involving one-vote margins per term.
+
+```{r}
+one_vote_terms %>%
+  mutate(percent_marginal = num_marginal_votes / num_cases) %>%
+#  filter(percent_marginal != 0) %>%
+  ggplot(aes(x = term, y = percent_marginal)) +
+    geom_col() +
+    scale_y_continuous(labels = scales::percent) +
+    labs(title = "Percent of Supreme Court Decisions Involving One-Vote Margins",
+         subtitle = "1791 - 2016",
+         x = "Term",
+         y = NULL)
+```
+
+## Percentage of Cases Justice Antonin Scalia in Majority
+
