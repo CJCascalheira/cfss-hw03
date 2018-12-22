@@ -470,7 +470,7 @@ class(supreme$dateDecision)
 
 Create a new column for the month that the decision was delivered, then group the cases by term and month to count the decisions per month. For fun, we can answer the question visually in one long pipeline.
 
-```{r fig.height=10}
+```{r fig.height=10, fig.width=10}
 supreme %>%
   # Create the month variable
   mutate(month = month(dateDecision)) %>%
@@ -504,5 +504,7 @@ supreme %>%
          y = NULL,
          caption = "Source: Supreme Court Database") +
     # Change default text size
-    theme(text = element_text(size = 20))
+    theme(text = element_text(size = 16))
 ```
+
+The Supreme Court delivers most of its decisions in January, February, and March. This could be related to the start of each term. Few decisions occur during July, and hardly any during August and September. Are these months used for deliberation?
