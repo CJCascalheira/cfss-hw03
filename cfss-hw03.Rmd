@@ -145,7 +145,24 @@ gap_hiv_complete %>%
   theme(legend.position = "top")
 ```
 
-The trend is negative and drops sharply. 
+The trend is negative and drops sharply.
+
+## Continents with NA
+
+```{r}
+gap_hiv %>%
+  group_by(continent) %>%
+  # Count missing values
+  count(is.na(hiv_prevalence)) %>%
+  # Clean column name
+  rename("missing" = "is.na(hiv_prevalence)") %>%
+  # Filter out non-missing values
+  filter(missing == TRUE) %>%
+  # Bar chart of results
+  
+```
+
+Alarmingly, even though African countries have the most cases of HIV, the dataset is least complete on the African continent. The HIV epidemic is likely more widespread than the data suggest.
 
 # Part 3
 ___
