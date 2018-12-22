@@ -2,7 +2,10 @@
 title: "CFSS Homework 03"
 author: "Cory J. Cascalheira"
 date: "December 21, 2018"
-output: html_document
+output:
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
 ```{r setup, include=FALSE}
@@ -219,6 +222,8 @@ Bind the rows to create a combined data frame.
 (supreme <- bind_rows(modern_sm, legacy_sm))
 ```
 
+There was no issue binding the two data frames together. This might be due to the selection of columns prior to binding, or the fact that I downloaded the datasets directly from the Supreme Court Database.
+
 ## Percentage of Cases Decided by One-vote Margin
 
 The observational unit is at the individual justice level per case. First, we need to count the number of cases per term. 
@@ -329,6 +334,8 @@ left_join(scalia_total, scalia_majority, by = "term") %>%
          caption = "Source: Supreme Court Database")
 ```
 
+For most of his career, Justice Scalia voted with the majority opinion on more than 70% of the cases for which he delivered judgement.
+
 ## Percentage of Cases Non-Unanimous
 
 We already calculated the number cases per term. This aggregate data frame will be useful in a moment.
@@ -397,9 +404,52 @@ Aside from an outlier in the early 1790s, the graph demonstrates that the non-un
 
 ## Percentage of Cases in Conservative Direction
 
-Again, we can use our data frame of the sum of cases per term as the denominator of the ratio. First, we need to calculate the number of cases decided in the conservative direction. 
+Again, we can use our data frame of the sum of cases per term as the denominator of the ratio. 
 
 ```{r}
-supreme
+head(cases_per_term)
+```
+
+First, we need to calculate the number of cases decided in the conservative direction. Remember, if `decisionDirection == 1`, then the case was decided in the conservative direction.
+
+```{r}
+(num_conservative <- supreme %>%
+  # Lump individual justices into single cases
+  count(term, caseIssuesId, decisionDirection) %>%
+  # Keep only the cases where the decision was conservative
+  filter(decisionDirection == 1) %>%
+  # Group the cases by term
+  group_by(term) %>%
+  # Number of cases that were conservatively decided
+  summarize(
+    conservative_decisions = n()
+  ))
+```
+
+Join the two data frames and calculate the percentage of conservative decisions.
+
+```{r}
+(conservative <- left_join(cases_per_term, num_conservative, by = "term") %>%
+  # Percentage of conservative decisions per term
+  mutate(percent_conservative = conservative_decisions / num_cases))
+```
+
+Visualize the percentage of decisions in the conservative direction over time.
+
+```{r fig.width=10}
+conservative %>%
+  ggplot(aes(x = term, y = percent_conservative)) +
+    geom_point() +
+    # Show trend line
+    geom_line(color = "cadetblue") +
+    # Add percent signs
+    scale_y_continuous(labels = scales::percent) +
+    # Customize breaks along x-axis
+    scale_x_continuous(breaks = seq(1790, 2016, by = 25)) +
+    labs(title = "Has the Supreme Court of the U.S. Become More Conservative?",
+         subtitle = "Percent of Decisions in the Conservative Direction, 1791 - 2016",
+         x = "Term",
+         y = NULL, 
+         caption = "Source: Supreme Court Database")
 ```
 
