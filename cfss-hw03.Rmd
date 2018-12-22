@@ -17,8 +17,9 @@ ___
 Load dependencies.
 
 ```{r message=FALSE}
-library(tidyverse)
-library(readxl)
+library(tidyverse) # utility & visualization
+library(readxl) # import excel data
+library(lubridate) # convert to date
 ```
 
 Set the default theme for `ggplot2`.
@@ -442,10 +443,13 @@ conservative %>%
     geom_point() +
     # Show trend line
     geom_line(color = "cadetblue") +
-    # Add percent signs
-    scale_y_continuous(labels = scales::percent) +
+    # Add percent signs, breaks, expand the y-axis, and start origin at 0
+    scale_y_continuous(labels = scales::percent, breaks = seq(0, 1, 0.1),
+                       limits = c(0, 1), expand = c(0, 0)) +
     # Customize breaks along x-axis
     scale_x_continuous(breaks = seq(1790, 2016, by = 25)) +
+    # Add horizontal line at 50% for comparison purposes
+    geom_hline(yintercept = 0.5, color = "blue") +
     labs(title = "Has the Supreme Court of the U.S. Become More Conservative?",
          subtitle = "Percent of Decisions in the Conservative Direction, 1791 - 2016",
          x = "Term",
@@ -453,3 +457,52 @@ conservative %>%
          caption = "Source: Supreme Court Database")
 ```
 
+## Decisions per Month
+
+Start by transforming the `dateDecision` variable into a date.
+
+```{r}
+supreme$dateDecision <- mdy(supreme$dateDecision)
+
+# Did the transformation work?
+class(supreme$dateDecision)
+```
+
+Create a new column for the month that the decision was delivered, then group the cases by term and month to count the decisions per month. For fun, we can answer the question visually in one long pipeline.
+
+```{r fig.height=10}
+supreme %>%
+  # Create the month variable
+  mutate(month = month(dateDecision)) %>%
+  # Condense the justices into one case, pass along month column
+  count(term, caseIssuesId, month) %>%
+  # Group by the months per term
+  group_by(term, month) %>%
+  # Count the number of decisions delivered in a particular month
+  summarize(
+    num_decisions = n()
+  ) %>%
+  ggplot(aes(x = term, y = num_decisions)) +
+    geom_point() +
+    facet_wrap(~ fct_recode(factor(month),
+                            "January" = "1",
+                            "February" = "2",
+                            "March" = "3",
+                            "April" = "4",
+                            "May" = "5",
+                            "June" = "6",
+                            "July" = "7",
+                            "August" = "8",
+                            "September" = "9",
+                            "October" = "10",
+                            "November" = "11",
+                            "December" = "12"),
+               ncol = 3) +
+    labs(title = "Number of Supreme Court Decisions per Month",
+         subtitle = "1791-2016",
+         x = "Term",
+         y = NULL,
+         caption = "Source: Supreme Court Database") +
+    # Change default text size
+    theme(text = element_text(size = 20))
+```
