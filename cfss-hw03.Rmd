@@ -288,8 +288,42 @@ one_vote_terms %>%
     labs(title = "Percent of Supreme Court Decisions Involving One-Vote Margins",
          subtitle = "1791 - 2016",
          x = "Term",
-         y = NULL)
+         y = NULL,
+         caption = "Source: Supreme Court Database")
 ```
 
 ## Percentage of Cases Justice Antonin Scalia in Majority
+
+Remember, if `majority == 2`, then Justice Scalia was in the majority.
+
+```{r}
+# Total number of cases for Scalia
+(scalia_total <- supreme %>%
+  filter(justiceName == "AScalia") %>%
+ count(term))
+
+# Cases in which Scalia was in majority
+(scalia_majority <- supreme %>%
+  filter(justiceName == "AScalia") %>%
+  group_by(term, majority) %>%
+  summarize(num_majority = n()) %>%
+  filter(majority == 2))
+
+# Join data frames
+left_join(scalia_total, scalia_majority, by = "term") %>%
+  group_by(term, n, num_majority) %>%
+  summarize(percent_majority = num_majority / n) %>%
+  ggplot(aes(x = term, y = percent_majority)) +
+    geom_point() +
+    geom_line(color = "cadetblue") +
+    scale_y_continuous(labels = scales::percent, limits = c(.5, 1)) +
+    scale_x_continuous(breaks = seq(1986, 2016, by = 4)) +
+    labs(title = "Justice Scalia in Majority",
+         subtitle = "Percent of Cases per Term Over His Career",
+         x = "Term",
+         y = NULL,
+         caption = "Source: Supreme Court Database")
+```
+
+## Percentage of Cases Non-Unanimous
 
