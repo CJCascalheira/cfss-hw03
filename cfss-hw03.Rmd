@@ -15,6 +15,7 @@ Load dependencies.
 
 ```{r message=FALSE}
 library(tidyverse)
+library(readxl)
 ```
 
 Load the data.
@@ -54,6 +55,54 @@ Tidy the data frame.
 
 # Part 2
 ___
+Load the data.
+
+```{r}
+library(gapminder)
+hiv <- read_excel("J:/sample_data/hiv-prevalence.xlsx")
+hiv
+```
+
+Fix the country column.
+
+```{r}
+colnames(hiv)[1] <- "country"
+```
+
+Are the same countries in both datasets?
+
+```{r}
+# Which countries are in the gapminder dataset
+gapminder_names <- unique(as.character(gapminder$country))
+
+# Filter the HIV dataset to include only those countries in gapminder
+(hiv2 <- hiv %>%
+  filter(country %in% gapminder_names)
+)
+```
+
+Tidy the HIV data frame.
+
+```{r}
+(hiv3 <- hiv2 %>%
+  gather(key = year, value = hiv_prevalence, -country)
+)
+```
+
+Transform year variable into an integer.
+
+```{r}
+hiv3$year <- as.integer(hiv3$year)
+
+# Verify change
+head(hiv3)
+```
+
+## HIV Prevalence & Life Expectancy
+
+```{r}
+
+```
 
 
 # Part 3
