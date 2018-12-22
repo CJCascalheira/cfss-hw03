@@ -284,7 +284,10 @@ one_vote_terms %>%
 #  filter(percent_marginal != 0) %>%
   ggplot(aes(x = term, y = percent_marginal)) +
     geom_col() +
-    scale_y_continuous(labels = scales::percent) +
+    # Percent added to values on y-axis and force origin to start at 0
+    scale_y_continuous(labels = scales::percent, expand = c(0, 0)) +
+    # Customize breaks along x-axis
+    scale_x_continuous(breaks = seq(1790, 2016, by = 25)) +
     labs(title = "Percent of Supreme Court Decisions Involving One-Vote Margins",
          subtitle = "1791 - 2016",
          x = "Term",
@@ -316,6 +319,7 @@ left_join(scalia_total, scalia_majority, by = "term") %>%
   ggplot(aes(x = term, y = percent_majority)) +
     geom_point() +
     geom_line(color = "cadetblue") +
+    # Scales adds percent sign to values on y-axis
     scale_y_continuous(labels = scales::percent, limits = c(.5, 1)) +
     scale_x_continuous(breaks = seq(1986, 2016, by = 4)) +
     labs(title = "Justice Scalia in Majority",
@@ -326,4 +330,76 @@ left_join(scalia_total, scalia_majority, by = "term") %>%
 ```
 
 ## Percentage of Cases Non-Unanimous
+
+We already calculated the number cases per term. This aggregate data frame will be useful in a moment.
+
+```{r}
+head(cases_per_term)
+```
+
+How many cases were non-unanimous in each term? As long as there is at least one dissent, then the decision was not unanimous. That is, the case is non-unanimous if `minVotes > 0`.
+
+```{r}
+(num_non_unanimous <- supreme %>%
+  # Group all justices into each case; n represents number of justices
+  count(caseIssuesId, term, minVotes) %>%
+  # Only non-unanimous decisions
+  filter(minVotes > 0) %>%
+  group_by(term) %>%
+  # Number of non-unanimous decisions per term
+  summarize(
+    non_unanimous_decisions = n()
+  ))
+```
+
+Now we can merge with the data frame of the sum of cases per term.
+
+```{r}
+head(dissent <- left_join(cases_per_term, num_non_unanimous, by = "term"))
+```
+
+Which observations contain missing values?
+
+```{r}
+(no_dissent <- which(is.na(dissent$non_unanimous_decisions)))
+```
+
+Replace those missing values with zero. Zero indicates that all cases for that term were decided unanimously.
+
+```{r}
+dissent$non_unanimous_decisions[no_dissent] <- 0
+
+# Verify that process worked
+head(dissent)
+```
+
+Visualize the percentage of cases per term that were non-unanimous.
+
+```{r}
+dissent %>%
+  # Calculate percentage of non-unanimous cases
+  mutate(percent_non_unanimous = non_unanimous_decisions / num_cases) %>%
+  ggplot(aes(x = term, y = percent_non_unanimous)) +
+    geom_col() +
+    # Add percent sign, extend y-axis to 100%, customize breaks, force origin to start at 0
+    scale_y_continuous(labels = scales::percent, limits = c(0, 1), 
+                       breaks = seq(0, 1, 0.1), expand = c(0, 0)) +
+    # Customize breaks along x-axis
+    scale_x_continuous(breaks = seq(1790, 2016, by = 25)) +
+    labs(title = "Non-Unanimity of Supreme Court Decisions",
+         subtitle = "Percent of Cases Not Unanimous per Term",
+         x = "Term",
+         y = NULL,
+         caption = "Source: Supreme Court Database")
+```
+
+Aside from an outlier in the early 1790s, the graph demonstrates that the non-unanimity of court decisions has increased over time. Has the modern era involved more divisive cases?
+
+## Percentage of Cases in Conservative Direction
+
+Again, we can use our data frame of the sum of cases per term as the denominator of the ratio. First, we need to calculate the number of cases decided in the conservative direction. 
+
+```{r}
+supreme
+```
 
