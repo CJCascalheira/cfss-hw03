@@ -1,0 +1,60 @@
+---
+title: "CFSS Homework 03"
+author: "Cory J. Cascalheira"
+date: "December 21, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Part 1
+___
+Load dependencies.
+
+```{r message=FALSE}
+library(tidyverse)
+```
+
+Load the data.
+
+```{r}
+load("J:/sample_data/dadmom.rda")
+dadmom
+```
+
+Tidy the data frame.
+
+```{r}
+# Tidy parents and names
+(parents <- dadmom %>%
+  # Remove income columns
+  select(-starts_with("inc")) %>%
+  # Gather except family ID
+  gather(key = parent, value = name, -famid) %>%
+  # Make parent variable make more sense
+  mutate(parent = fct_recode(factor(parent), "father" = "named", "mother" = "namem"))
+)
+
+# Tidy the income, make sure order matches parents
+(income <- dadmom %>%
+  # Remove name columns
+  select(-starts_with("name")) %>%
+  # Gather except family ID
+  gather(key = parent, value = income, -famid) %>%
+  # Drop family ID and parent columns
+  select(income)
+)
+
+# Bind columns
+(dadmom_new <- bind_cols(parents, income)
+)
+```
+
+# Part 2
+___
+
+
+# Part 3
+___
