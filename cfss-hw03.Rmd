@@ -508,3 +508,9 @@ supreme %>%
 ```
 
 The Supreme Court delivers most of its decisions in January, February, and March. This could be related to the start of each term. Few decisions occur during July, and hardly any during August and September. Are these months used for deliberation?
+
+# Session Info
+___
+```{r}
+devtools::session_info()
+```
